@@ -63,7 +63,7 @@ EchoLearn is an AI-powered educational platform that bridges the communication g
 - OpenAI APIs (Whisper + GPT-4)
 - SQLite database
 - WebSocket support
-- SignAll API integration
+- Built-in ASL translation system
 
 **Deployment:**
 - Vercel (Frontend)
@@ -166,7 +166,7 @@ EchoLearn is an AI-powered educational platform that bridges the communication g
 ## 🔗 Resources
 
 - **OpenAI Platform**: https://platform.openai.com/
-- **SignAll API**: https://www.signall.us/
+- **ASL Translation**: Built-in fallback system for sign language
 - **Accessibility Guidelines**: https://www.w3.org/WAI/WCAG21/quickref/
 - **ASL Resources**: https://www.nad.org/
 

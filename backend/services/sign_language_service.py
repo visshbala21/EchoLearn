@@ -1,4 +1,3 @@
-import requests
 import os
 import json
 from typing import Dict, Any, List
@@ -8,10 +7,7 @@ load_dotenv()
 
 class SignLanguageService:
     def __init__(self):
-        self.signall_api_key = os.getenv("SIGNALL_API_KEY")
-        self.base_url = "https://api.signall.us"
-        
-        # Fallback ASL dictionary for basic signs when API is not available
+        # Fallback ASL dictionary for basic signs
         self.basic_signs = {
             "hello": {"gesture": "wave", "description": "Wave hand"},
             "thank you": {"gesture": "flat_hand_to_chin", "description": "Flat hand from chin forward"},
@@ -28,46 +24,24 @@ class SignLanguageService:
     async def translate_to_asl(self, text: str) -> Dict[str, Any]:
         """Translate text to ASL gestures and descriptions"""
         try:
-            # If SignAll API is available, use it
-            if self.signall_api_key:
-                return await self._signall_translate(text)
-            else:
-                # Use fallback translation
-                return await self._fallback_translate(text)
+            return await self._fallback_translate(text)
         except Exception as e:
             print(f"Error translating to ASL: {e}")
-            return await self._fallback_translate(text)
-    
-    async def _signall_translate(self, text: str) -> Dict[str, Any]:
-        """Use SignAll API for professional ASL translation"""
-        headers = {
-            "Authorization": f"Bearer {self.signall_api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "text": text,
-            "output_format": "json",
-            "include_timestamps": True
-        }
-        
-        try:
-            response = requests.post(
-                f"{self.base_url}/translate",
-                headers=headers,
-                json=payload,
-                timeout=10
-            )
-            
-            if response.status_code == 200:
-                return response.json()
-            else:
-                return await self._fallback_translate(text)
-        except:
-            return await self._fallback_translate(text)
+            # Return basic error response
+            return {
+                "original_text": text,
+                "total_duration": 1.5,
+                "signs": [{
+                    "word": "error",
+                    "gesture": "point_forward",
+                    "description": "Unable to translate",
+                    "timing": 0
+                }],
+                "avatar_instructions": []
+            }
     
     async def _fallback_translate(self, text: str) -> Dict[str, Any]:
-        """Fallback ASL translation using basic sign dictionary"""
+        """ASL translation using basic sign dictionary"""
         words = text.lower().split()
         translations = []
         
@@ -145,8 +119,7 @@ class SignLanguageService:
     
     async def get_sign_video_url(self, gesture: str) -> str:
         """Get URL for sign demonstration video"""
-        # In a real implementation, this would return URLs to sign videos
-        # For MVP, return placeholder video URLs
+        # Return placeholder video URLs for sign demonstrations
         video_mapping = {
             "wave": "/videos/asl/wave.mp4",
             "thumbs_up": "/videos/asl/thumbs_up.mp4",

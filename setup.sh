@@ -8,7 +8,6 @@ echo "Creating environment files..."
 # Backend .env
 if [ ! -f "backend/.env" ]; then
     echo "OPENAI_API_KEY=your_openai_api_key_here" > backend/.env
-    echo "SIGNALL_API_KEY=your_signall_api_key_here" >> backend/.env
     echo "DATABASE_URL=sqlite:///./echolearn.db" >> backend/.env
     echo "SECRET_KEY=your_secret_key_here_$(openssl rand -hex 32)" >> backend/.env
     echo "ENVIRONMENT=development" >> backend/.env
@@ -62,8 +61,7 @@ echo "🎉 Setup complete!"
 echo ""
 echo "Next steps:"
 echo "1. Add your OpenAI API key to backend/.env"
-echo "2. (Optional) Add SignAll API key to backend/.env for enhanced ASL translation"
-echo "3. Start the backend: cd backend && source venv/bin/activate && uvicorn main:app --reload"
-echo "4. Start the frontend: cd frontend && npm run dev"
+echo "2. Start the backend: cd backend && source venv/bin/activate && uvicorn main:app --reload"
+echo "3. Start the frontend: cd frontend && npm run dev"
 echo ""
 echo "Happy learning! 🎓" 

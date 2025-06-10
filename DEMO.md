@@ -96,7 +96,7 @@
 - **Scalability**: Can serve unlimited users simultaneously
 
 ### Technical Innovation (30%)
-- **AI Integration**: OpenAI Whisper + GPT-4 + SignAll
+- **AI Integration**: OpenAI Whisper + GPT-4 + Built-in ASL
 - **Real-time Processing**: WebSocket communication
 - **Multi-modal**: Speech → Text → ASL → Visual
 - **Fallback Systems**: Works without premium APIs

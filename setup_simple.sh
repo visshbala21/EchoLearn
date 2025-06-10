@@ -12,7 +12,6 @@ echo "Creating environment files..."
 # Backend .env
 if [ ! -f "backend/.env" ]; then
     echo "OPENAI_API_KEY=your_openai_api_key_here" > backend/.env
-    echo "SIGNALL_API_KEY=your_signall_api_key_here" >> backend/.env
     echo "DATABASE_URL=sqlite:///./echolearn.db" >> backend/.env
     echo "SECRET_KEY=your_secret_key_here_$(date +%s)" >> backend/.env
     echo "ENVIRONMENT=development" >> backend/.env

@@ -16,7 +16,7 @@ EchoLearn is an AI-powered educational platform that converts spoken lectures, v
 - **Frontend**: React + Vite + TailwindCSS
 - **Backend**: FastAPI + SQLite
 - **AI Services**: OpenAI (Whisper + GPT-4)
-- **Sign Language**: SignAll API integration
+- **Sign Language**: Built-in ASL translation system
 - **Real-time**: WebSocket for live updates
 
 ## 🚀 Quick Start
@@ -48,7 +48,6 @@ Create `.env` files in both backend and frontend directories:
 **backend/.env**:
 ```
 OPENAI_API_KEY=your_openai_api_key_here
-SIGNALL_API_KEY=your_signall_api_key_here
 ```
 
 **frontend/.env**:
@@ -85,7 +84,6 @@ EchoLearn/
 ## 🔑 API Keys Setup
 
 1. **OpenAI API**: Get your key from https://platform.openai.com/
-2. **SignAll API**: Register at https://www.signall.us/ for sign language translation
 
 ## 🎨 Accessibility Features
 

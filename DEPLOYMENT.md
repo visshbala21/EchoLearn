@@ -13,7 +13,7 @@ This guide covers deploying EchoLearn to production for the hackathon.
 3. Set environment variables:
    ```
    OPENAI_API_KEY=your_openai_api_key
-   SIGNALL_API_KEY=your_signall_api_key (optional)
+   
    DATABASE_URL=sqlite:///./echolearn.db
    SECRET_KEY=your_secret_key
    ENVIRONMENT=production
@@ -87,7 +87,7 @@ This guide covers deploying EchoLearn to production for the hackathon.
 - `ENVIRONMENT`: Set to "production"
 
 ### Backend Optional:
-- `SIGNALL_API_KEY`: For enhanced ASL translation
+
 
 ### Frontend Required:
 - `VITE_API_URL`: Backend API URL
@@ -117,11 +117,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost/echol
 3. Add to environment variables
 4. **Important**: Set usage limits to avoid unexpected charges
 
-### SignAll API Key (Optional)
-1. Register at [SignAll.us](https://www.signall.us/)
-2. Get API credentials
-3. Add to environment variables
-4. If not provided, app will use fallback ASL translation
+
 
 ## Performance Optimization
 
@@ -191,8 +187,8 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost/echol
    - Test microphone permissions
 
 4. **ASL Translation Not Working**
-   - Check if SignAll API key is set
-   - Fallback translation should still work
+   - Built-in fallback translation should work automatically
+   - Check browser console for JavaScript errors
 
 ## Quick Deploy Commands
 
