@@ -43,14 +43,17 @@ export const apiService = {
   async transcribeAudio(audioFile, sessionId = null) {
     const formData = new FormData();
     formData.append('file', audioFile);
+
+    const params = {};
     if (sessionId) {
-      formData.append('session_id', sessionId);
+      params.session_id = sessionId;
     }
 
     const response = await api.post('/transcribe/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      params: params
     });
     return response.data;
   },

@@ -7,7 +7,9 @@ import {
   DocumentArrowUpIcon,
   SpeakerWaveIcon,
   PlayIcon,
-  PauseIcon
+  PauseIcon,
+  SparklesIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 
 const AudioRecorder = ({ onTranscription, isProcessing }) => {
@@ -60,6 +62,11 @@ const AudioRecorder = ({ onTranscription, isProcessing }) => {
   };
 
   const startRecording = async () => {
+    if (isRecording) {
+      toast.error('Recording is already in progress.');
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -84,11 +91,40 @@ const AudioRecorder = ({ onTranscription, isProcessing }) => {
       };
       
       mediaRecorder.current.onstop = () => {
-        const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
-        setAudioBlob(audioBlob);
-        
+        try {
+          console.log('Recording stopped, processing audio chunks:', audioChunks.current.length);
+          
+          if (audioChunks.current.length === 0) {
+            toast.error('No audio was recorded. Please try again.');
+            return;
+          }
+
+          const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
+          console.log('Created audio blob:', audioBlob.size, 'bytes');
+          
+          if (audioBlob.size === 0) {
+            toast.error('Recording failed - no audio data captured.');
+            return;
+          }
+
+          setAudioBlob(audioBlob);
+        } catch (error) {
+          console.error('Error processing recorded audio:', error);
+          toast.error('Failed to process recorded audio. Please try again.');
+        } finally {
+          stream.getTracks().forEach(track => track.stop());
+          setAudioLevel(0);
+        }
+      };
+
+      mediaRecorder.current.onerror = (event) => {
+        console.error('MediaRecorder error:', event.error);
+        toast.error('Recording error occurred. Please try again.');
+        setIsRecording(false);
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
         stream.getTracks().forEach(track => track.stop());
-        setAudioLevel(0);
       };
       
       mediaRecorder.current.start(1000);
@@ -114,16 +150,26 @@ const AudioRecorder = ({ onTranscription, isProcessing }) => {
   };
 
   const stopRecording = () => {
-    if (mediaRecorder.current && isRecording) {
-      mediaRecorder.current.stop();
+    if (!isRecording) {
+      toast.error('No recording in progress.');
+      return;
+    }
+
+    try {
+      if (mediaRecorder.current && mediaRecorder.current.state === 'recording') {
+        mediaRecorder.current.stop();
+      }
+      
       setIsRecording(false);
       
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
       
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
       }
       
       toast.success('Recording stopped!', {
@@ -134,6 +180,10 @@ const AudioRecorder = ({ onTranscription, isProcessing }) => {
           color: '#fff',
         },
       });
+    } catch (error) {
+      console.error('Error stopping recording:', error);
+      toast.error('Error stopping recording. Recording may have ended unexpectedly.');
+      setIsRecording(false);
     }
   };
 
@@ -168,8 +218,66 @@ const AudioRecorder = ({ onTranscription, isProcessing }) => {
   };
 
   const submitAudio = () => {
-    if (audioBlob && onTranscription) {
+    try {
+      if (!audioBlob) {
+        toast.error('No audio to transcribe. Please record or upload audio first.');
+        return;
+      }
+
+      if (!onTranscription) {
+        toast.error('Transcription service not available. Please refresh the page.');
+        return;
+      }
+
+      console.log('Submitting audio for transcription:', {
+        size: audioBlob.size,
+        type: audioBlob.type
+      });
+
       onTranscription(audioBlob);
+    } catch (error) {
+      console.error('Error submitting audio:', error);
+      toast.error('Failed to submit audio for transcription. Please try again.');
+    }
+  };
+
+  const deleteAudio = () => {
+    try {
+      // Ask for confirmation before deleting
+      const confirmed = window.confirm('Are you sure you want to delete this audio recording? This action cannot be undone.');
+      
+      if (!confirmed) {
+        return;
+      }
+
+      // Clear the audio blob
+      setAudioBlob(null);
+      
+      // Reset playback state
+      setIsPlaying(false);
+      
+      // Clean up the audio reference
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+      
+      // Clear file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      toast.success('Audio recording deleted', {
+        icon: '🗑️',
+        style: {
+          borderRadius: '12px',
+          background: '#f59e0b',
+          color: '#fff',
+        },
+      });
+    } catch (error) {
+      console.error('Error deleting audio:', error);
+      toast.error('Failed to delete audio. Please try again.');
     }
   };
 
@@ -342,18 +450,30 @@ const AudioRecorder = ({ onTranscription, isProcessing }) => {
                       <SpeakerWaveIcon className="h-6 w-6 text-gray-600" />
                       <span className="font-semibold text-gray-700">Audio Preview</span>
                     </div>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={togglePlayback}
-                      className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
-                    >
-                      {isPlaying ? (
-                        <PauseIcon className="h-5 w-5" />
-                      ) : (
-                        <PlayIcon className="h-5 w-5" />
-                      )}
-                    </motion.button>
+                    <div className="flex items-center space-x-3">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={togglePlayback}
+                        className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+                        title={isPlaying ? "Pause" : "Play"}
+                      >
+                        {isPlaying ? (
+                          <PauseIcon className="h-5 w-5" />
+                        ) : (
+                          <PlayIcon className="h-5 w-5" />
+                        )}
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={deleteAudio}
+                        className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                        title="Delete recording"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </motion.button>
+                    </div>
                   </div>
                   <audio 
                     ref={audioRef}
@@ -366,46 +486,61 @@ const AudioRecorder = ({ onTranscription, isProcessing }) => {
                   />
                 </div>
 
-                {/* Submit Button */}
-                <motion.button
-                  whileHover={{ scale: 1.02, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={submitAudio}
-                  disabled={isProcessing}
-                  className="btn-primary w-full text-xl py-4 disabled:opacity-50 relative overflow-hidden"
-                >
-                  <AnimatePresence>
-                    {isProcessing ? (
+                {/* Action Buttons */}
+                <div className="flex gap-4">
+                  {/* Delete Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={deleteAudio}
+                    disabled={isProcessing}
+                    className="btn-secondary flex-1 text-lg py-4 disabled:opacity-50 flex items-center justify-center space-x-2"
+                  >
+                    <TrashIcon className="h-5 w-5" />
+                    <span>Delete</span>
+                  </motion.button>
+
+                  {/* Submit Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={submitAudio}
+                    disabled={isProcessing}
+                    className="btn-primary flex-[2] text-xl py-4 disabled:opacity-50 relative overflow-hidden"
+                  >
+                    <AnimatePresence>
+                      {isProcessing ? (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="flex items-center justify-center space-x-3"
+                        >
+                          <div className="spinner h-6 w-6"></div>
+                          <span>Processing Audio...</span>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="flex items-center justify-center space-x-3"
+                        >
+                          <SparklesIcon className="h-6 w-6" />
+                          <span>Transcribe Audio</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    
+                    {isProcessing && (
                       <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="flex items-center justify-center space-x-3"
-                      >
-                        <div className="spinner h-6 w-6"></div>
-                        <span>Processing Audio...</span>
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="flex items-center justify-center space-x-3"
-                      >
-                        <SparklesIcon className="h-6 w-6" />
-                        <span>Transcribe Audio</span>
-                      </motion.div>
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                        animate={{ x: ['-100%', '100%'] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                      />
                     )}
-                  </AnimatePresence>
-                  
-                  {isProcessing && (
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                      animate={{ x: ['-100%', '100%'] }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                    />
-                  )}
-                </motion.button>
+                  </motion.button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

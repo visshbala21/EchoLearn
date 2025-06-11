@@ -84,9 +84,17 @@ async def get_session(session_id: int, db: Session = Depends(get_db)):
     return session
 
 @app.post("/transcribe/")
-async def transcribe_audio(file: UploadFile = File(...), session_id: int = None, db: Session = Depends(get_db)):
+async def transcribe_audio(
+    file: UploadFile = File(...), 
+    session_id: int = None, 
+    db: Session = Depends(get_db)
+):
     """Transcribe uploaded audio file"""
+    print(f"Transcribe endpoint called with session_id: {session_id}")
+    print(f"File received: {file.filename}, content_type: {file.content_type}")
+    
     if not file.content_type.startswith('audio/'):
+        print(f"Invalid file type: {file.content_type}")
         raise HTTPException(status_code=400, detail="File must be an audio file")
     
     # Save uploaded file temporarily
@@ -96,29 +104,62 @@ async def transcribe_audio(file: UploadFile = File(...), session_id: int = None,
         temp_file_path = temp_file.name
     
     try:
+        print(f"Starting transcription of file: {temp_file_path}")
         # Transcribe the audio
         transcription = await ai_service.transcribe_audio(temp_file_path)
+        print(f"Transcription completed: {transcription[:100]}...")
         
         # Generate ASL translation
         asl_data = await sign_language_service.translate_to_asl(transcription)
+        print(f"ASL translation completed")
         
         # Update session if provided
         if session_id:
+            print(f"Updating session {session_id} with transcription")
             session = db.query(LearningSession).filter(LearningSession.id == session_id).first()
             if session:
                 session.transcription = transcription
                 session.sign_language_data = json.dumps(asl_data)
-                db.commit()
+                try:
+                    db.commit()
+                    db.refresh(session)
+                    print(f"Session {session_id} updated successfully. Transcription length: {len(transcription)}")
+                    
+                    # Verify the update worked
+                    updated_session = db.query(LearningSession).filter(LearningSession.id == session_id).first()
+                    print(f"Verification - Session {session_id} transcription exists: {bool(updated_session.transcription)}")
+                    
+                except Exception as e:
+                    print(f"Error committing session update: {e}")
+                    db.rollback()
+                    raise HTTPException(status_code=500, detail="Failed to save transcription to session")
+            else:
+                print(f"Session {session_id} not found for update")
+                raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+        else:
+            print("No session_id provided, transcription will not be saved")
         
         return {
             "transcription": transcription,
             "asl_translation": asl_data,
-            "session_id": session_id
+            "session_id": session_id,
+            "success": True
         }
+    
+    except Exception as e:
+        print(f"Error during transcription: {e}")
+        if 'HTTPException' in str(type(e)):
+            raise e
+        else:
+            raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
     
     finally:
         # Clean up temporary file
-        os.unlink(temp_file_path)
+        try:
+            os.unlink(temp_file_path)
+            print(f"Cleaned up temporary file: {temp_file_path}")
+        except:
+            print(f"Failed to clean up temporary file: {temp_file_path}")
 
 @app.post("/summarize/")
 async def summarize_content(session_id: int, db: Session = Depends(get_db)):
@@ -142,19 +183,32 @@ async def summarize_content(session_id: int, db: Session = Depends(get_db)):
 @app.post("/quiz/generate/")
 async def generate_quiz(session_id: int, num_questions: int = 3, db: Session = Depends(get_db)):
     """Generate quiz questions from session content"""
+    print(f"Generating quiz for session_id: {session_id}")
+    
     session = db.query(LearningSession).filter(LearningSession.id == session_id).first()
     if not session:
+        print(f"Session {session_id} not found")
         raise HTTPException(status_code=404, detail="Session not found")
     
-    if not session.transcription:
-        raise HTTPException(status_code=400, detail="No transcription found for this session")
+    print(f"Session found: {session.id}, transcription exists: {bool(session.transcription)}")
+    print(f"Transcription content: {session.transcription[:100] if session.transcription else 'None'}...")
+    
+    if not session.transcription or session.transcription.strip() == "":
+        print(f"No valid transcription found for session {session_id}")
+        raise HTTPException(status_code=400, detail="No transcription available for quiz generation. Please transcribe audio first.")
     
     # Generate quiz questions
     quiz_data = await ai_service.generate_quiz(session.transcription, num_questions)
     
+    print(f"AI service returned {len(quiz_data)} quiz questions")
+    if not quiz_data:
+        print("No quiz questions generated by AI service")
+        raise HTTPException(status_code=500, detail="Failed to generate quiz questions. The AI service may be unavailable.")
+    
     # Save quiz questions to database
     quiz_ids = []
-    for q in quiz_data:
+    for i, q in enumerate(quiz_data):
+        print(f"Saving question {i+1}: {q.get('question', 'No question')[:50]}...")
         quiz = Quiz(
             session_id=session_id,
             question=q['question'],
@@ -166,7 +220,9 @@ async def generate_quiz(session_id: int, num_questions: int = 3, db: Session = D
         db.commit()
         db.refresh(quiz)
         quiz_ids.append(quiz.id)
+        print(f"Saved quiz question with ID: {quiz.id}")
     
+    print(f"Total quiz questions saved: {len(quiz_ids)}")
     return {"quiz_questions": quiz_data, "quiz_ids": quiz_ids, "session_id": session_id}
 
 @app.post("/quiz/answer/")

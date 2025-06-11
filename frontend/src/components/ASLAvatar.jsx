@@ -126,7 +126,60 @@ const ASLAvatar = ({ aslData, isVisible = true }) => {
           </motion.button>
         </div>
 
-        {/* Playback Controls */}
+        {/* Main Playback Controls - Always Visible */}
+        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              {!isPlaying ? (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handlePlay}
+                  className="btn-primary px-6 py-3 flex items-center space-x-3 text-lg"
+                >
+                  <PlayIcon className="h-6 w-6" />
+                  <span>Play All Signs</span>
+                </motion.button>
+              ) : (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handlePause}
+                  className="btn-secondary px-6 py-3 flex items-center space-x-3 text-lg"
+                >
+                  <PauseIcon className="h-6 w-6" />
+                  <span>Pause</span>
+                </motion.button>
+              )}
+              
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleReset}
+                className="btn-secondary px-4 py-3 flex items-center space-x-2"
+              >
+                <ArrowPathIcon className="h-5 w-5" />
+                <span>Reset</span>
+              </motion.button>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <label className="text-sm font-medium text-gray-700">Speed:</label>
+              <select
+                value={playbackSpeed}
+                onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white"
+              >
+                <option value={0.5}>0.5x</option>
+                <option value={1}>1x</option>
+                <option value={1.5}>1.5x</option>
+                <option value={2}>2x</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Advanced Settings - Collapsible */}
         <AnimatePresence>
           {showDetails && (
             <motion.div 
@@ -135,54 +188,8 @@ const ASLAvatar = ({ aslData, isVisible = true }) => {
               exit={{ opacity: 0, height: 0 }}
               className="mb-6 p-4 bg-gray-50/80 rounded-xl border border-gray-200/50"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <label className="text-sm font-medium text-gray-700">Speed:</label>
-                  <select
-                    value={playbackSpeed}
-                    onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
-                    className="text-sm border border-gray-300 rounded-lg px-3 py-1 bg-white"
-                  >
-                    <option value={0.5}>0.5x</option>
-                    <option value={1}>1x</option>
-                    <option value={1.5}>1.5x</option>
-                    <option value={2}>2x</option>
-                  </select>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  {!isPlaying ? (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handlePlay}
-                      className="btn-primary text-sm px-4 py-2 flex items-center space-x-2"
-                    >
-                      <PlayIcon className="h-4 w-4" />
-                      <span>Play</span>
-                    </motion.button>
-                  ) : (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handlePause}
-                      className="btn-secondary text-sm px-4 py-2 flex items-center space-x-2"
-                    >
-                      <PauseIcon className="h-4 w-4" />
-                      <span>Pause</span>
-                    </motion.button>
-                  )}
-                  
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleReset}
-                    className="btn-secondary text-sm px-4 py-2 flex items-center space-x-2"
-                  >
-                    <ArrowPathIcon className="h-4 w-4" />
-                    <span>Reset</span>
-                  </motion.button>
-                </div>
+              <div className="text-sm text-gray-600">
+                <p>Additional controls and settings can be added here.</p>
               </div>
             </motion.div>
           )}

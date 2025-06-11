@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { 
   ClockIcon, 
   DocumentTextIcon, 
@@ -9,7 +10,8 @@ import {
   EyeIcon,
   SparklesIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  FunnelIcon
 } from '@heroicons/react/24/outline';
 import { apiService } from '../services/api';
 import ParticleBackground from '../components/ParticleBackground';
@@ -18,6 +20,7 @@ const SessionHistory = () => {
   const [sessions, setSessions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadSessions();
@@ -47,11 +50,13 @@ const SessionHistory = () => {
 
   const getSessionStats = (session) => {
     const stats = {
-      hasTranscription: !!session.transcription,
-      hasSummary: !!session.summary,
-      hasASL: !!session.sign_language_data,
-      duration: session.duration || 0
+      hasTranscription: !!(session?.transcription && session.transcription.trim() !== ''),
+      hasSummary: !!(session?.summary && session.summary.trim() !== ''),
+      hasASL: !!(session?.sign_language_data && session.sign_language_data.trim() !== ''),
+      duration: session?.duration || 0
     };
+    
+    console.log('Session stats for ID', session?.id, ':', stats);
     return stats;
   };
 
@@ -184,131 +189,139 @@ const SessionHistory = () => {
                     whileHover={{ y: -8, scale: 1.02 }}
                     className="card group cursor-pointer relative overflow-hidden"
                   >
-                    <Link to={`/session/${session.id}`} className="block">
-                      {/* Completion Status Indicator */}
-                      <div className="absolute top-4 right-4 z-10">
-                        <div className={`w-4 h-4 rounded-full ${
-                          completion.status === 'complete' ? 'bg-green-500' :
-                          completion.status === 'partial' ? 'bg-yellow-500' : 'bg-gray-300'
-                        }`} />
-                      </div>
+                    {/* Completion Status Indicator */}
+                    <div className="absolute top-4 right-4 z-10">
+                      <div className={`w-4 h-4 rounded-full ${
+                        completion.status === 'complete' ? 'bg-green-500' :
+                        completion.status === 'partial' ? 'bg-yellow-500' : 'bg-gray-300'
+                      }`} />
+                    </div>
 
-                      {/* Session Header */}
-                      <div className="flex items-start justify-between mb-6">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-gray-900 group-hover:gradient-text transition-all duration-300 mb-2">
-                            {session.title}
-                          </h3>
-                          <div className="flex items-center space-x-2 text-gray-500">
-                            <ClockIcon className="h-4 w-4" />
-                            <span className="text-sm font-medium">{formatDate(session.created_at)}</span>
-                          </div>
+                    {/* Session Header */}
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900 group-hover:gradient-text transition-all duration-300 mb-2">
+                          {session.title}
+                        </h3>
+                        <div className="flex items-center space-x-2 text-gray-500">
+                          <ClockIcon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{formatDate(session.created_at)}</span>
                         </div>
-                        
+                      </div>
+                      
+                      <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="text-blue-500 group-hover:text-indigo-600 transition-colors"
+                      >
+                        <EyeIcon className="h-6 w-6" />
+                      </motion.div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="mb-6">
+                      <div className="flex justify-between text-sm text-gray-600 mb-2">
+                        <span className="font-medium">Progress</span>
+                        <span className="font-bold">{completion.percentage}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                         <motion.div
-                          whileHover={{ scale: 1.1, rotate: 5 }}
-                          className="text-blue-500 group-hover:text-indigo-600 transition-colors"
-                        >
-                          <EyeIcon className="h-6 w-6" />
-                        </motion.div>
+                          className={`h-3 rounded-full ${
+                            completion.status === 'complete' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                            completion.status === 'partial' ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                            'bg-gray-300'
+                          }`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${completion.percentage}%` }}
+                          transition={{ duration: 1, delay: index * 0.1 }}
+                        />
                       </div>
+                    </div>
 
-                      {/* Progress Bar */}
-                      <div className="mb-6">
-                        <div className="flex justify-between text-sm text-gray-600 mb-2">
-                          <span className="font-medium">Progress</span>
-                          <span className="font-bold">{completion.percentage}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                          <motion.div
-                            className={`h-3 rounded-full ${
-                              completion.status === 'complete' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
-                              completion.status === 'partial' ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
-                              'bg-gray-300'
-                            }`}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${completion.percentage}%` }}
-                            transition={{ duration: 1, delay: index * 0.1 }}
-                          />
+                    {/* Feature Status Grid */}
+                    <div className="grid grid-cols-3 gap-3 mb-6">
+                      <div className={`text-center p-3 rounded-xl transition-all duration-300 ${
+                        stats.hasTranscription 
+                          ? 'bg-green-100 text-green-800 border border-green-200' 
+                          : 'bg-gray-100 text-gray-500 border border-gray-200'
+                      }`}>
+                        <DocumentTextIcon className="h-6 w-6 mx-auto mb-2" />
+                        <div className="text-xs font-semibold">
+                          {stats.hasTranscription ? 'Transcribed' : 'No Text'}
                         </div>
                       </div>
-
-                      {/* Feature Status Grid */}
-                      <div className="grid grid-cols-3 gap-3 mb-6">
-                        <div className={`text-center p-3 rounded-xl transition-all duration-300 ${
-                          stats.hasTranscription 
-                            ? 'bg-green-100 text-green-800 border border-green-200' 
-                            : 'bg-gray-100 text-gray-500 border border-gray-200'
-                        }`}>
-                          <DocumentTextIcon className="h-6 w-6 mx-auto mb-2" />
-                          <div className="text-xs font-semibold">
-                            {stats.hasTranscription ? 'Transcribed' : 'No Text'}
-                          </div>
-                        </div>
-                        
-                        <div className={`text-center p-3 rounded-xl transition-all duration-300 ${
-                          stats.hasASL 
-                            ? 'bg-blue-100 text-blue-800 border border-blue-200' 
-                            : 'bg-gray-100 text-gray-500 border border-gray-200'
-                        }`}>
-                          <HandRaisedIcon className="h-6 w-6 mx-auto mb-2" />
-                          <div className="text-xs font-semibold">
-                            {stats.hasASL ? 'ASL Ready' : 'No ASL'}
-                          </div>
-                        </div>
-                        
-                        <div className={`text-center p-3 rounded-xl transition-all duration-300 ${
-                          stats.hasSummary 
-                            ? 'bg-purple-100 text-purple-800 border border-purple-200' 
-                            : 'bg-gray-100 text-gray-500 border border-gray-200'
-                        }`}>
-                          <SparklesIcon className="h-6 w-6 mx-auto mb-2" />
-                          <div className="text-xs font-semibold">
-                            {stats.hasSummary ? 'Summarized' : 'No Summary'}
-                          </div>
+                      
+                      <div className={`text-center p-3 rounded-xl transition-all duration-300 ${
+                        stats.hasASL 
+                          ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                          : 'bg-gray-100 text-gray-500 border border-gray-200'
+                      }`}>
+                        <HandRaisedIcon className="h-6 w-6 mx-auto mb-2" />
+                        <div className="text-xs font-semibold">
+                          {stats.hasASL ? 'ASL Ready' : 'No ASL'}
                         </div>
                       </div>
-
-                      {/* Transcription Preview */}
-                      {session.transcription && (
-                        <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-4 mb-4">
-                          <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">
-                            {session.transcription.length > 120 
-                              ? session.transcription.substring(0, 120) + '...'
-                              : session.transcription
-                            }
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Status Badge and Action */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          {completion.status === 'complete' && (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
-                              <CheckCircleIcon className="h-3 w-3 mr-1" />
-                              Complete
-                            </span>
-                          )}
-                          {completion.status === 'partial' && (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
-                              <ClockIcon className="h-3 w-3 mr-1" />
-                              In Progress
-                            </span>
-                          )}
-                          {completion.status === 'incomplete' && (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
-                              <XCircleIcon className="h-3 w-3 mr-1" />
-                              Not Started
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="text-sm font-semibold text-blue-600 group-hover:text-indigo-600 transition-colors">
-                          View Details →
+                      
+                      <div className={`text-center p-3 rounded-xl transition-all duration-300 ${
+                        stats.hasSummary 
+                          ? 'bg-purple-100 text-purple-800 border border-purple-200' 
+                          : 'bg-gray-100 text-gray-500 border border-gray-200'
+                      }`}>
+                        <SparklesIcon className="h-6 w-6 mx-auto mb-2" />
+                        <div className="text-xs font-semibold">
+                          {stats.hasSummary ? 'Summarized' : 'No Summary'}
                         </div>
                       </div>
-                    </Link>
+                    </div>
+
+                    {/* Transcription Preview */}
+                    {session.transcription && (
+                      <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-4 mb-4">
+                        <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">
+                          {session.transcription.length > 120 
+                            ? session.transcription.substring(0, 120) + '...'
+                            : session.transcription
+                          }
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Status Badge and Action */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        {completion.status === 'complete' && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
+                            <CheckCircleIcon className="h-3 w-3 mr-1" />
+                            Complete
+                          </span>
+                        )}
+                        {completion.status === 'partial' && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                            <ClockIcon className="h-3 w-3 mr-1" />
+                            In Progress
+                          </span>
+                        )}
+                        {completion.status === 'incomplete' && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                            <XCircleIcon className="h-3 w-3 mr-1" />
+                            Not Started
+                          </span>
+                        )}
+                      </div>
+                      
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log('Navigating to session details:', session.id);
+                          navigate(`/session/${session.id}?view=details`);
+                        }}
+                        className="text-sm font-semibold text-blue-600 hover:text-indigo-600 transition-colors flex items-center space-x-1 px-3 py-2 rounded-lg hover:bg-blue-50 border border-blue-200 hover:border-blue-300"
+                      >
+                        <span>View Details</span>
+                        <span>→</span>
+                      </motion.button>
+                    </div>
                   </motion.div>
                 );
               })}
