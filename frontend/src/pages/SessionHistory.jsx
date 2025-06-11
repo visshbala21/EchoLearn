@@ -32,6 +32,7 @@ const SessionHistory = () => {
       setSessions(result.sessions || []);
     } catch (error) {
       console.error('Error loading sessions:', error);
+      toast.error('Failed to load session history');
     } finally {
       setIsLoading(false);
     }
@@ -187,7 +188,7 @@ const SessionHistory = () => {
                       bounce: 0.3
                     }}
                     whileHover={{ y: -8, scale: 1.02 }}
-                    className="card group cursor-pointer relative overflow-hidden"
+                    className="card group relative overflow-hidden"
                   >
                     {/* Completion Status Indicator */}
                     <div className="absolute top-4 right-4 z-10">
@@ -285,6 +286,8 @@ const SessionHistory = () => {
                       </div>
                     )}
 
+
+
                     {/* Status Badge and Action */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
@@ -313,10 +316,28 @@ const SessionHistory = () => {
                         whileTap={{ scale: 0.95 }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          console.log('Navigating to session details:', session.id);
-                          navigate(`/session/${session.id}?view=details`);
+                          e.preventDefault();
+                          
+                          // Show immediate feedback to user
+                          toast.success(`Opening details for "${session.title}"`, {
+                            icon: '📖',
+                            duration: 2000,
+                          });
+                          
+                          // Navigate to the session details view
+                          const targetPath = `/session/${session.id}?view=details`;
+                          navigate(targetPath);
+                          
+                          // Fallback: if navigate doesn't work, try window.location
+                          setTimeout(() => {
+                            if (window.location.pathname === '/history') {
+                              window.location.href = targetPath;
+                            }
+                          }, 100);
                         }}
                         className="text-sm font-semibold text-blue-600 hover:text-indigo-600 transition-colors flex items-center space-x-1 px-3 py-2 rounded-lg hover:bg-blue-50 border border-blue-200 hover:border-blue-300"
+                        type="button"
+                        style={{ position: 'relative', zIndex: 10 }}
                       >
                         <span>View Details</span>
                         <span>→</span>

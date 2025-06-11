@@ -36,30 +36,83 @@ const LearningSession = () => {
 
   // Check URL parameters for direct navigation to details view
   useEffect(() => {
+    console.log('=== URL PARAMETER CHECK ===');
+    console.log('Current location:', window.location.href);
+    console.log('Location search:', location.search);
+    
     const searchParams = new URLSearchParams(location.search);
     const viewParam = searchParams.get('view');
     
+    console.log('View parameter:', viewParam);
+    console.log('Session ID:', sessionId);
+    
     if (viewParam === 'details') {
-      setActiveTab('details');
+      console.log('Details view requested via URL parameter');
       setShowDetailsView(true);
+      setActiveTab('details');
+      
+      // Show user feedback that we're loading the details view
+      toast.success('Loading session details...', {
+        icon: '📋',
+        duration: 2000,
+      });
+      
+      // Force load session data if not already loaded
+      if (sessionId && !session) {
+        console.log('Loading session for details view...');
+        loadSession();
+      }
     }
-  }, [location.search]);
+    console.log('=========================');
+  }, [location.search, sessionId]);
 
   // Check if user came from history (has session data already)
   useEffect(() => {
+    console.log('=== SESSION LOADING CHECK ===');
+    console.log('Session ID:', sessionId);
+    console.log('Is processing:', isProcessing);
+    
     if (sessionId && !isProcessing) {
-      // Check if there's existing content to show details view
-      checkForExistingContent();
+      console.log('Loading session and checking for existing content...');
+      // Always load session first, then check for existing content
+      loadSession().then(() => {
+        console.log('Session loaded, now checking for existing content...');
+        checkForExistingContent();
+      });
     }
+    console.log('============================');
   }, [sessionId]);
 
   const checkForExistingContent = async () => {
     try {
+      console.log('=== CONTENT CHECK ===');
+      console.log('Checking for existing content...');
       const sessionData = await apiService.getSession(sessionId);
-      if (sessionData.transcription || sessionData.summary || sessionData.sign_language_data) {
+      console.log('Session data for content check:', sessionData);
+      
+      const hasContent = sessionData.transcription || sessionData.summary || sessionData.sign_language_data;
+      console.log('Has existing content:', hasContent);
+      console.log('Transcription exists:', !!sessionData.transcription);
+      console.log('Summary exists:', !!sessionData.summary);
+      console.log('ASL data exists:', !!sessionData.sign_language_data);
+      
+      if (hasContent) {
+        console.log('Setting showDetailsView to true');
         setShowDetailsView(true);
-        setActiveTab('details');
+        
+        // Only auto-switch to details if coming from URL parameter
+        const searchParams = new URLSearchParams(location.search);
+        const viewParam = searchParams.get('view');
+        console.log('Current view param:', viewParam);
+        
+        if (viewParam === 'details') {
+          console.log('Auto-switching to details tab');
+          setActiveTab('details');
+        }
+      } else {
+        console.log('No existing content found');
       }
+      console.log('===================');
     } catch (error) {
       console.error('Error checking session content:', error);
     }
@@ -1255,6 +1308,22 @@ const SessionDetailsView = ({ session, transcription, summary, aslData, onNaviga
           </div>
         </div>
 
+        {/* Session Metadata */}
+        <div className="grid md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-gray-50 p-4 rounded-xl">
+            <div className="text-sm text-gray-600 mb-1">Session ID</div>
+            <div className="font-mono text-sm">{session.id}</div>
+          </div>
+          <div className="bg-gray-50 p-4 rounded-xl">
+            <div className="text-sm text-gray-600 mb-1">Duration</div>
+            <div className="font-semibold">{session.duration ? `${session.duration}s` : 'Not recorded'}</div>
+          </div>
+          <div className="bg-gray-50 p-4 rounded-xl">
+            <div className="text-sm text-gray-600 mb-1">Last Updated</div>
+            <div className="font-semibold">{formatDate(session.updated_at || session.created_at)}</div>
+          </div>
+        </div>
+
         {/* Quick Stats Grid */}
         <div className="grid md:grid-cols-4 gap-4">
           <div className={`p-4 rounded-xl border ${status.hasTranscription ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
@@ -1350,6 +1419,9 @@ const SessionDetailsView = ({ session, transcription, summary, aslData, onNaviga
               <div className="prose prose-sm text-gray-800" 
                    dangerouslySetInnerHTML={{ __html: summary.replace(/\n/g, '<br>') }} />
             </div>
+            <div className="mt-3 text-xs text-gray-500">
+              {summary.split(' ').length} words • AI-generated summary
+            </div>
           </motion.div>
         )}
       </div>
@@ -1439,6 +1511,15 @@ const SessionDetailsView = ({ session, transcription, summary, aslData, onNaviga
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.5 }}
       >
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => window.history.back()}
+          className="btn-secondary px-6 py-3 flex items-center space-x-2"
+        >
+          <ArrowLeftIcon className="h-4 w-4" />
+          <span>Back to History</span>
+        </motion.button>
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
